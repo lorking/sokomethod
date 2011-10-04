@@ -1,170 +1,142 @@
 #include <stdio.h>
 #include "sokopush.h"
 //是否能向左推
-int isCanPushLeft(struct sokomap map,struct mappos pos)
+int isCanPushLeft(struct sokomap map,int x,int y)
 {
-	if(isValidPosition(map,pos) != 1)
+	if(isValidPosition(map,x,y) != 1)
 	{
 		return 0;
 	}
 	//当前位置是否箱子
-	if(isBox(map,pos) != 1)
+	if(isBox(map,x,y) != 1)
 	{
 		return 0;
 	}
 	//当前的位置,设置临时变量
-	struct mappos tmpPos;
-	tmpPos.x = pos.x - 1;
-	tmpPos.y = pos.y;
-	if(isValidPosition(map,tmpPos) && isEmpty(map,tmpPos))
+	if(isValidPosition(map,x -1,y) && isEmpty(map,x-1,y))
 	{
 		return 1;
 	}
 	return 0;
 }
 
-int pushLeft(struct sokomap map,struct mappos pos)
+int pushLeft(struct sokomap map,int x,int y)
 {
-	struct mappos leftPos;
-	leftPos.x = pos.x -1;
-	leftPos.y = pos.y;
-	int left_pos = paraPosition2Index(map,leftPos);
+	int left_pos = paraPosition2Index(map,x-1,y);
 	setBox(map.array,left_pos);
-	int current_pos = paraPosition2Index(map,pos);
+	int current_pos = paraPosition2Index(map,x,y);
 	clearBox(map.array,current_pos);
 	//清除人的位置
 	int person_pos = paraPosition2IndexByXY(map,map.person_x,map.person_y);
 	clearPerson(map.array,person_pos);
 	setPerson(map.array,current_pos);
-	map.person_x = pos.x;
-	map.person_y = pos.y;
+	map.person_x = x;
+	map.person_y = y;
 	return 1;
 }
 
-int isCanPushRight(struct sokomap map,struct mappos pos)
+int isCanPushRight(struct sokomap map,int x,int y)
 {
-	if(isValidPosition(map,pos) != 1)
+	if(isValidPosition(map,x,y) != 1)
 	{
 		return 0;
 	}
 	//当前位置是否箱子
-	if(isBox(map,pos) != 1)
+	if(isBox(map,x,y) != 1)
 	{
 		return 0;
 	}
-	//当前的位置,设置临时变量
-	struct mappos tmpPos;
-	tmpPos.x = pos.x + 1;
-	tmpPos.y = pos.y;
-	if(isValidPosition(map,tmpPos) && isEmpty(map,tmpPos))
+	if(isValidPosition(map,x+1,y) && isEmpty(map,x+1,y))
 	{
 		return 1;
 	}
 	return 0;
 }
 
-int pushRight(struct sokomap map,struct mappos pos)
+int pushRight(struct sokomap map,int x,int y)
 {
-	struct mappos leftPos;
-	leftPos.x = pos.x + 1;
-	leftPos.y = pos.y;
-	int left_pos = paraPosition2Index(map,leftPos);
+	int left_pos = paraPosition2Index(map,x +1,y);
 	setBox(map.array,left_pos);
-	int current_pos = paraPosition2Index(map,pos);
+	int current_pos = paraPosition2Index(map,x,y);
 	clearBox(map.array,current_pos);
 	//清除人的位置
 	int person_pos = paraPosition2IndexByXY(map,map.person_x,map.person_y);
 	clearPerson(map.array,person_pos);
 	setPerson(map.array,current_pos);
-	map.person_x = pos.x;
-	map.person_y = pos.y;
+	map.person_x = x;
+	map.person_y = y;
 	return 1;
 }
 
-int isCanPushUp(struct sokomap map,struct mappos pos)
+int isCanPushUp(struct sokomap map,int x,int y)
 {
-	if(isValidPosition(map,pos) != 1)
+	if(isValidPosition(map,x,y) != 1)
 	{
 		return 0;
 	}
 	//当前位置是否箱子
-	if(isBox(map,pos) != 1)
+	if(isBox(map,x,y) != 1)
 	{
 		return 0;
 	}
-	//当前的位置,设置临时变量
-	struct mappos tmpPos;
-	tmpPos.x = pos.x;
-	tmpPos.y = pos.y - 1;
-	if(isValidPosition(map,tmpPos) && isEmpty(map,tmpPos))
+	if(isValidPosition(map,x,y-1) && isEmpty(map,x,y-1))
 	{
 		return 1;
 	}
 	return 0;
 }
 
-int pushUp(struct sokomap map,struct mappos pos)
+int pushUp(struct sokomap map,int x,int y)
 {
-	struct mappos leftPos;
-	leftPos.x = pos.x - 1;
-	leftPos.y = pos.y;
-	int left_pos = paraPosition2Index(map,leftPos);
+	int left_pos = paraPosition2Index(map,x,y-1);
 	setBox(map.array,left_pos);
-	int current_pos = paraPosition2Index(map,pos);
+	int current_pos = paraPosition2Index(map,x,y);
 	clearBox(map.array,current_pos);
 	//清除人的位置
 	int person_pos = paraPosition2IndexByXY(map,map.person_x,map.person_y);
 	clearPerson(map.array,person_pos);
 	setPerson(map.array,current_pos);
-	map.person_x = pos.x;
-	map.person_y = pos.y;
+	map.person_x = x;
+	map.person_y = y;
 	return 1;
 }
 
-int isCanPushDown(struct sokomap map,struct mappos pos)
+int isCanPushDown(struct sokomap map,int x,int y)
 {
-	if(isValidPosition(map,pos) != 1)
+	if(isValidPosition(map,x,y) != 1)
 	{
 		return 0;
 	}
 	//当前位置是否箱子
-	if(isBox(map,pos) != 1)
+	if(isBox(map,x,y) != 1)
 	{
 		return 0;
 	}
 	//当前的位置,设置临时变量
-	struct mappos tmpPos;
-	tmpPos.x = pos.x;
-	tmpPos.y = pos.y + 1;
-	if(isValidPosition(map,tmpPos) && isEmpty(map,tmpPos))
+	if(isValidPosition(map,x,y+1) && isEmpty(map,x,y+1))
 	{
 		return 1;
 	}
 	return 0;
 }
 
-int pushDown(struct sokomap map,struct mappos pos)
+int pushDown(struct sokomap map,int x,int y)
 {
-	struct mappos leftPos;
-	leftPos.x = pos.x;
-	leftPos.y = pos.y + 1;
-	int left_pos = paraPosition2Index(map,leftPos);
+	int left_pos = paraPosition2Index(map,x,y+1);
 	setBox(map.array,left_pos);
-	int current_pos = paraPosition2Index(map,pos);
+	int current_pos = paraPosition2Index(map,x,y);
 	clearBox(map.array,current_pos);
 	//清除人的位置
 	int person_pos = paraPosition2IndexByXY(map,map.person_x,map.person_y);
 	clearPerson(map.array,person_pos);
 	setPerson(map.array,current_pos);
-	map.person_x = pos.x;
-	map.person_y = pos.y;
+	map.person_x = x;
+	map.person_y = y;
 	return 1;
 }
 
-int isValidPosition(struct sokomap map,struct mappos pos)
+int isValidPosition(struct sokomap map,int x,int y)
 {
-	int x = pos.x;
-	int y = pos.y;
 	if(x > map.width -1 || x < 0 || y > map.hight - 1 || y < 0)
 	{
 		return 0;
@@ -172,10 +144,8 @@ int isValidPosition(struct sokomap map,struct mappos pos)
 	return 1;
 }
 
-int paraPosition2Index(struct sokomap map,struct mappos pos)
+int paraPosition2Index(struct sokomap map,int x,int y)
 {
-	int x = pos.x;
-	int y = pos.y;
 	int position = y * map.width + x;
 	return position;
 }
@@ -184,13 +154,13 @@ int paraPosition2IndexByXY(struct sokomap map,int x,int y)
 	int position = y * map.width + x;
 	return position;
 }
-int isWall(struct sokomap map,struct mappos pos)
+int isWall(struct sokomap map,int x,int y)
 {
-	if(isValidPosition(map,pos) != 1)
+	if(isValidPosition(map,x,y) != 1)
 	{
 		return 0;
 	}
-	int posIndex = paraPosition2Index(map,pos);
+	int posIndex = paraPosition2Index(map,x,y);
 	char posValue = map.array[posIndex];
 	return isWall_value(posValue);
 }
@@ -215,13 +185,13 @@ int isBox_value(char value)
 	}
 }
 
-int isBox(struct sokomap map,struct mappos pos)
+int isBox(struct sokomap map,int x,int y)
 {
-	if(isValidPosition(map,pos) != 1)
+	if(isValidPosition(map,x,y) != 1)
 	{
 		return 0;
 	}
-	int posIndex = paraPosition2Index(map,pos);
+	int posIndex = paraPosition2Index(map,x,y);
 	char posValue = map.array[posIndex];
 	return isBox_value(posValue);
 }
@@ -236,13 +206,13 @@ int isPerson_value(char value)
 		return 0;
 	}
 }
-int isPerson(struct sokomap map,struct mappos pos)
+int isPerson(struct sokomap map,int x,int y)
 {
-	if(isValidPosition(map,pos) != 1)
+	if(isValidPosition(map,x,y) != 1)
 	{
 		return 0;
 	}
-	int posIndex = paraPosition2Index(map,pos);
+	int posIndex = paraPosition2Index(map,x,y);
 	char posValue = map.array[posIndex];
 	return isPerson_value(posValue);
 }
@@ -258,20 +228,20 @@ int isDest_value(char value)
 	}
 }
 
-int isDest(struct sokomap map,struct mappos pos)
+int isDest(struct sokomap map,int x,int y)
 {
-	if(isValidPosition(map,pos) != 1)
+	if(isValidPosition(map,x,y) != 1)
 	{
 		return 0;
 	}
-	int posIndex = paraPosition2Index(map,pos);
+	int posIndex = paraPosition2Index(map,x,y);
 	char posValue = map.array[posIndex];
 	return isDest_value(posValue);
 }
 
-int isEmpty(struct sokomap map,struct mappos pos)
+int isEmpty(struct sokomap map,int x,int y)
 {
-	if(isValidPosition(map,pos) ==1 && isWall(map,pos) !=1 && isBox(map,pos) !=1)
+	if(isValidPosition(map,x,y) ==1 && isWall(map,x,y) !=1 && isBox(map,x,y) !=1)
 	{
 		return 1;
 	}else
