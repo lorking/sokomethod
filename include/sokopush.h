@@ -1,5 +1,12 @@
 #ifndef _SOKO_PUSH_H_
 #define _SOKO_PUSH_H_
+/*存储位置的结构体*/
+struct mappos
+{
+	unsigned char x;//横坐标
+	unsigned char y;//纵坐标
+	struct mappos * next;//下一个节点
+};
 /*存储推箱子地图的存储结构,char 从低bit到高bit为1依次为墙,箱子,人,目标*/
 struct sokomap
 {
@@ -7,14 +14,9 @@ struct sokomap
 	unsigned char hight;//地图的高度
 	char * array;//用来存储地图的列表
 	struct sokomap * next;//下一个地图的指针
+	struct sokomap * parent;//父节点的指针
 	unsigned char person_x,person_y;//人所在的坐标
-};
-/*存储位置的结构体*/
-struct mappos
-{
-	unsigned char x;//横坐标
-	unsigned char y;//纵坐标
-	struct mappos * next;//下一个节点
+	struct mappos * pos;
 };
 /*能否向左推*/
 int isCanPushLeft(struct sokomap map,int x,int y);
@@ -73,4 +75,8 @@ void clearWall(char *buf,int position);
 void clearPerson(char *buf,int position);
 /*地图是否已经成功*/
 int isMapSuccess(struct sokomap map);
+/*比较两个地图是否相同*/
+int cmpMapBoxIsEqual(struct sokomap map1,struct sokomap map2);
+/*获得所有箱子的坐标*/
+void getBoxList(struct sokomap map,struct mappos *pos);
 #endif

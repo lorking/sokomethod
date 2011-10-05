@@ -347,3 +347,36 @@ int isMapSuccess(struct sokomap map)
 	}
 	return 1;
 }
+
+int cmpMapBoxIsEqual(struct sokomap map1,struct sokomap map2)
+{
+	int count = (int)map1.width * (int)map1.hight;
+	for(int i=0;i < count;i++)
+	{
+		if(isBox_value(map1.array[i]))
+		{
+			if(isBox_value(map1.array[i])!=1)
+			{
+				return 0;
+			}
+		}
+	}
+	return 1;
+}
+
+void getBoxList(struct sokomap map,struct mappos *pos)
+{
+	int i = 0;
+	for(int y=0;y < map.hight;y++)
+	{
+		for(int x=0;x < map.width;x++)
+		{
+			if(isBox(map,x,y))
+			{
+				pos[i].x = x;
+				pos[i].y = y;
+				i++;
+			}
+		}
+	}
+}
