@@ -2,10 +2,10 @@
 #include "soko_pos_operation.h"
 #include "sokopush.h"
 //用递归的方式求出人能走到的列表
-struct mappos * personCanWalkPoint(struct sokomap map)
+struct mappos * personCanWalkPoint(struct sokomap *map)
 {
-	int x = map.person_x;
-	int y = map.person_y;
+	int x = map->person_x;
+	int y = map->person_y;
 	struct mappos * head = (struct mappos *)malloc(sizeof(struct mappos));
 	head->x = x;
 	head->y = y;
@@ -15,9 +15,9 @@ struct mappos * personCanWalkPoint(struct sokomap map)
 	struct mappos * tail = head;
 	while(pointer)
 	{
-		int x = head -> x;
-		int y = head -> y;
-		if(isEmpty(map,x,y-1) && isInMappos(pointer,x,y-1) != 1)
+		int x = pointer -> x;
+		int y = pointer -> y;
+		if(isEmpty(map,x,y-1) && (isInMappos(head,x,y-1) != 1))
 		{
 			struct mappos * newPointer = (struct mappos *)malloc(sizeof(struct mappos));
 			newPointer -> x = x;
@@ -27,7 +27,7 @@ struct mappos * personCanWalkPoint(struct sokomap map)
 			//吧新生成的节点赋值给尾部
 			tail = newPointer;
 		}
-		if(isEmpty(map,x,y+1) && isInMappos(pointer,x,y+1) != 1)
+		if(isEmpty(map,x,y+1) && (isInMappos(head,x,y+1) != 1))
 		{
 			struct mappos * newPointer = (struct mappos *)malloc(sizeof(struct mappos));
 			newPointer -> x = x;
@@ -37,7 +37,7 @@ struct mappos * personCanWalkPoint(struct sokomap map)
 			//吧新生成的节点赋值给尾部
 			tail = newPointer;
 		}
-		if(isEmpty(map,x-1,y) && isInMappos(pointer,x-1,y) != 1)
+		if(isEmpty(map,x-1,y) && (isInMappos(head,x-1,y) != 1))
 		{
 			struct mappos * newPointer = (struct mappos *)malloc(sizeof(struct mappos));
 			newPointer -> x = x-1;
@@ -47,7 +47,7 @@ struct mappos * personCanWalkPoint(struct sokomap map)
 			//吧新生成的节点赋值给尾部
 			tail = newPointer;
 		}
-		if(isEmpty(map,x+1,y) && isInMappos(pointer,x+1,y) != 1)
+		if(isEmpty(map,x+1,y) && (isInMappos(head,x+1,y) != 1))
 		{
 			struct mappos * newPointer = (struct mappos *)malloc(sizeof(struct mappos));
 			newPointer -> x = x+1;
@@ -57,6 +57,7 @@ struct mappos * personCanWalkPoint(struct sokomap map)
 			//吧新生成的节点赋值给尾部
 			tail = newPointer;
 		}
+		pointer = pointer -> next;
 	}
 	return head;
 }
@@ -65,7 +66,7 @@ int isInMappos(struct mappos * header,int x,int y)
 {
 	while(header)
 	{
-		if(header->x==x && header-> y == y)
+		if((header->x==x) && (header-> y == y))
 		{
 			return 1;
 		}
