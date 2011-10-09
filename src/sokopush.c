@@ -396,30 +396,38 @@ void memSetSokoMap(struct sokomap * map,char * array,int width,int height)
 
 void setBox_xy(struct sokomap *map,int x,int y)
 {
+	if(isPerson(map,x,y) || isWall(map,x,y))
+		return;
 	int position = paraPosition2Index(map,x,y);
 	setBox(map->array,position);
 }
 
 void setDest_xy(struct sokomap *map,int x,int y)
 {
+	if(isWall(map,x,y))
+		return;
 	int position = paraPosition2Index(map,x,y);
 	setDest(map->array,position);
 }
 
 void setWall_xy(struct sokomap *map,int x,int y)
 {
+	if(isPerson(map,x,y) || isDest(map,x,y) || isBox(map,x,y))
+		return;
 	int position = paraPosition2Index(map,x,y);
 	setWall(map->array,position);
 }
 
 void setPerson_xy(struct sokomap *map,int x,int y)
 {
+	if(isWall(map,x,y) || isBox(map,x,y))
+		return;
 	int person_x = map->person_x;
 	int person_y = map->person_y;
 	if((person_x != -1) && (person_y != -1))
 	{
 		int position = paraPosition2Index(map,person_x,person_y);
-		setPerson(map->array,position);
+		clearPerson(map->array,position);
 	}
 	int position = paraPosition2Index(map,x,y);
 	setPerson(map->array,position);

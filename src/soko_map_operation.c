@@ -582,6 +582,8 @@ struct sokomap * caculatePath(struct sokomap *map)
 			retSokomap->next = tmpSokoPtr;
 			tmpSokoPtr = retSokomap;
 			current = current -> parent;
+			//设置父亲节点 
+			tmpSokoPtr -> parent = current;
 		}
 	}
 	//清除内存的操作
