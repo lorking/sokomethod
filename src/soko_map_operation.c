@@ -25,7 +25,7 @@ int isMapDead(struct sokomap *header,int x,int y,enum direction direct)
 	switch(direct)
 	{
 		case UP:
-			if(isWall(header,x,y-1) != 1 )//上方为墙
+			if(isWall(header,x,y-1) == 1 )//上方为墙
 			{
 				if(isDest(header,x,y) != 1)//箱子不在目标地址上
 				{
@@ -128,7 +128,7 @@ int isMapDead(struct sokomap *header,int x,int y,enum direction direct)
 			}
 			break;	
 		case DOWN:
-			if(isWall(header,x,y+1) != 1 )//下方为墙
+			if(isWall(header,x,y+1) == 1 )//下方为墙
 			{
 				if(isDest(header,x,y) != 1)//箱子不在目标地址上
 				{
@@ -231,7 +231,7 @@ int isMapDead(struct sokomap *header,int x,int y,enum direction direct)
 			}
 			break;
 		case LEFT:
-			if(isWall(header,x-1,y) != 1 )//左方为墙
+			if(isWall(header,x-1,y) == 1 )//左方为墙
 			{
 				if(isDest(header,x,y) != 1)//箱子不在目标地址上
 				{
@@ -332,7 +332,7 @@ int isMapDead(struct sokomap *header,int x,int y,enum direction direct)
 			}
 			break;
 		case RIGHT:
-			if(isWall(header,x+1,y) != 1 )//右方为墙
+			if(isWall(header,x+1,y) == 1 )//右方为墙
 			{
 				if(isDest(header,x,y) != 1)//箱子不在目标地址上
 				{
@@ -579,11 +579,15 @@ struct sokomap * caculatePath(struct sokomap *map)
 		while(current)
 		{
 			retSokomap = copyMap(current);
+			retSokomap -> parent = NULL;
 			retSokomap->next = tmpSokoPtr;
+			//设置父亲节点 
+			if(tmpSokoPtr)
+			{
+				tmpSokoPtr -> parent = retSokomap;
+			}
 			tmpSokoPtr = retSokomap;
 			current = current -> parent;
-			//设置父亲节点 
-			tmpSokoPtr -> parent = current;
 		}
 	}
 	//清除内存的操作
@@ -624,4 +628,36 @@ int isInSokoMap(struct sokomap * header,struct sokomap * map)
 		header = header -> next;
 	}
 	return 0;
+}
+//加入人走过的路径
+struct sokomap * addPersonWalkPath(struct sokomap *map)
+{
+	struct sokomap *current_map = map;
+	struct sokomap *nxt_map = NULL;
+	struct sokomap *tmp_map1 = NULL,*tmp_map2 = NULL;
+	while(current_map)
+	{
+		nxt_map = current_map -> next;
+		if(nxt_map != NULL)
+		{
+			struct mappos * pos = personWalkPath(current_map,nxt_map);
+			pos = pos -> next;
+			while(pos)
+			{
+				//复制一个地图
+				tmp_map1 = copyMap(current_map);
+				tmp_map2 = current_map -> next;
+				current_map -> next = tmp_map1;
+				tmp_map1 -> parent = current_map;
+				tmp_map1 -> next = tmp_map2;
+				tmp_map2 -> parent = tmp_map1;
+				setPerson_xy(tmp_map1,pos->x,pos->y);
+				
+				current_map = tmp_map1;
+				pos = pos -> next;
+			}
+			freeMappos(pos);
+		}
+		current_map = nxt_map;
+	}
 }

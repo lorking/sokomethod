@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <signal.h> 
+#include <sys/time.h>
 #include <gtk/gtk.h>
 #include "debug.h"
 #include "sokopush.h"
@@ -9,14 +11,12 @@
 #define HEIGHT 550
 #define DRAWING_WIDTH 421
 #define DRAWING_HEIGHT 421
+#define INTERVE 3
 enum BigStatus{
 	BEFORE,DOING,END
 };
 enum DrawStatus{
 	BOX=0,PERSON,DEST,WALL,CLEAR,OTHER
-};
-enum ResultStatus{
-	RUNING,STOP
 };
 
 static GtkWidget *window;//总窗口
@@ -28,11 +28,12 @@ static GtkWidget *drawingArea;//绘制图片的
 static int bigstatus;//大状态
 static int drawStatus;//画图时所处的状态
 static gulong drawButtonStatusHandlerId[5];//存放连接按钮的工具
+static gulong startShowResultHandlerId;//开始按钮的ID
 //按钮
 static GtkWidget *sizeButton,*wallButton,*boxButton,*destButton,*personButton,*clearButton,*startCaculateButton;//按钮
-static GtkWidget *startShowButton,*nxtButton,*preButton,*stopButton;//按钮
+static GtkWidget *nxtButton,*preButton;//按钮
 static GdkPixbuf *boxPixbuf=NULL,*wallPixbuf=NULL,*destPixbuf=NULL,*personPixbuf=NULL,*boxInDestPixbuf=NULL;//图像的缓冲区
-static struct sokomap *map=NULL,*resultMap=NULL;//地图的指针和答案的指针
+static struct sokomap *map=NULL,*resultMap=NULL;//地图的指针和答案的指针列表的指针
 //清除资源的操作
 void clearResource()
 {
@@ -46,8 +47,13 @@ void clearResource()
 //清除地图的操作
 void clearMap()
 {
-	freeMap(map);
-	freeMap(resultMap);
+	if(resultMap)
+	{
+		freeMap(resultMap);
+	}else
+	{
+		freeMap(map);	
+	}
 }
 //初始化地图
 struct sokomap * initMap(int width,int height)
@@ -87,9 +93,166 @@ void closeApp(GtkWidget *window, gpointer data)
 {
 	gtk_main_quit();
 }
+//开始计算的操作
+void buttonBeginCaculate(GtkWidget *win, gpointer data)
+{
+	if(bigstatus !=  BEFORE)
+	{
+		return;
+	}
+	//计算地图人，箱子，石头的数量
+	int personCount,boxCount,stoneCount,destCount;
+	GtkWidget *dialog;
+	mapProperyCount(map,&stoneCount,&boxCount,&personCount,&destCount);
+	if(boxCount == 0)
+	{
+		dialog = gtk_message_dialog_new(window,GTK_DIALOG_DESTROY_WITH_PARENT,GTK_MESSAGE_INFO,GTK_BUTTONS_OK,"The box count can't be zero");
+		gtk_dialog_run(GTK_DIALOG(dialog));
+		gtk_widget_destroy (dialog);
+		return;
+	}
+	if(stoneCount == 0)
+	{
+		dialog = gtk_message_dialog_new(window,GTK_DIALOG_DESTROY_WITH_PARENT,GTK_MESSAGE_INFO,GTK_BUTTONS_OK,"The stone count can't be zero");
+		gtk_dialog_run(GTK_DIALOG(dialog));
+		gtk_widget_destroy (dialog);
+		return;
+	}
+	if(personCount == 0)
+	{
+		dialog = gtk_message_dialog_new(window,GTK_DIALOG_DESTROY_WITH_PARENT,GTK_MESSAGE_INFO,GTK_BUTTONS_OK,"The person count can't be zero");
+		gtk_dialog_run(GTK_DIALOG(dialog));
+		gtk_widget_destroy (dialog);
+		return;
+	}
+	if(destCount == 0)
+	{
+		dialog = gtk_message_dialog_new(window,GTK_DIALOG_DESTROY_WITH_PARENT,GTK_MESSAGE_INFO,GTK_BUTTONS_OK,"The dest count can't be zero");
+		gtk_dialog_run(GTK_DIALOG(dialog));
+		gtk_widget_destroy (dialog);
+		return;
+	}
+	if(boxCount != destCount)
+	{
+		dialog = gtk_message_dialog_new(window,GTK_DIALOG_DESTROY_WITH_PARENT,GTK_MESSAGE_INFO,GTK_BUTTONS_OK,"The dest count can't equal box count");
+		gtk_dialog_run(GTK_DIALOG(dialog));
+		gtk_widget_destroy (dialog);
+		return;
+	}
+	if(isMapClose(map) != 1)
+	{
+		dialog = gtk_message_dialog_new(window,GTK_DIALOG_DESTROY_WITH_PARENT,GTK_MESSAGE_INFO,GTK_BUTTONS_OK,"The map don't close");
+		gtk_dialog_run(GTK_DIALOG(dialog));
+		gtk_widget_destroy (dialog);
+		return;
+	}
+	//重新刷新地图
+	if(isMapSuccess(map))
+	{
+		dialog = gtk_message_dialog_new(window,GTK_DIALOG_DESTROY_WITH_PARENT,GTK_MESSAGE_INFO,GTK_BUTTONS_OK,"The map already success!");
+		gtk_dialog_run(GTK_DIALOG(dialog));
+		gtk_widget_destroy (dialog);
+		return;
+	}
+	//重新设置地图
+	bigstatus =  DOING;
+	drawStatus = OTHER;
+	setSetMapButtonStatus();
+	resultMap = caculatePath(map);
+	//计算结果是否存在
+	if(resultMap == NULL)
+	{
+		dialog = gtk_message_dialog_new(window,GTK_DIALOG_DESTROY_WITH_PARENT,GTK_MESSAGE_INFO,GTK_BUTTONS_OK,"Don't find the result,may be it is a dead map!");
+		gtk_dialog_run(GTK_DIALOG(dialog));
+		gtk_widget_destroy (dialog);
+		//把状态重新设置为没计算前
+		bigstatus =  BEFORE;
+		drawStatus = OTHER;
+		return;
+	}else
+	{
+		//加入人走过的路径
+		addPersonWalkPath(resultMap);
+		dialog = gtk_message_dialog_new(window,GTK_DIALOG_DESTROY_WITH_PARENT,GTK_MESSAGE_INFO,GTK_BUTTONS_OK,"Has found the result!");
+		gtk_dialog_run(GTK_DIALOG(dialog));
+		gtk_widget_destroy (dialog);
+
+		bigstatus =  END;
+		drawStatus = OTHER;
+		struct sokomap * tmpMap = map;
+		map = resultMap;//开始的指针
+		freeMap(tmpMap);
+		return;
+	}
+}
+// 设置新的地图
+void buttonSetNewMap(GtkWidget *win, gpointer data)
+{
+	GtkWidget *dialog = gtk_message_dialog_new(window,GTK_DIALOG_DESTROY_WITH_PARENT,GTK_MESSAGE_QUESTION,GTK_BUTTONS_OK_CANCEL,"Are you sure you wish to make new Map?The current map will miss!");
+	int result = gtk_dialog_run(GTK_DIALOG(dialog));
+	if(result != GTK_RESPONSE_OK)
+	{
+		gtk_widget_destroy (dialog);
+		return;
+	}
+	gtk_widget_destroy (dialog);
+	dialog = gtk_dialog_new_with_buttons ("Input map size",
+					GTK_WINDOW (window),
+					GTK_DIALOG_MODAL| GTK_DIALOG_DESTROY_WITH_PARENT,
+					GTK_STOCK_OK,
+					GTK_RESPONSE_OK,
+					GTK_STOCK_CANCEL,
+                                        GTK_RESPONSE_CANCEL,
+					NULL);
+	//设置对话框里的内容
+	GtkWidget *table = gtk_table_new (2, 1, FALSE);
+	GtkWidget *label = NULL;
+	GtkWidget *widthEntry;
+	gtk_table_set_row_spacings (GTK_TABLE (table), 10);
+  	gtk_table_set_col_spacings (GTK_TABLE (table), 10);
+	label = gtk_label_new_with_mnemonic ("map width and height:");
+	gtk_table_attach_defaults(GTK_TABLE (table),label,0, 1, 0, 1);
+	widthEntry = gtk_entry_new();
+	gtk_table_attach_defaults(GTK_TABLE (table),widthEntry,1, 2, 0, 1);
+	gtk_box_pack_start(GTK_BOX (GTK_DIALOG (dialog)->vbox), table, FALSE, FALSE, 0);
+	gtk_widget_show_all (table);	
+	result = gtk_dialog_run(GTK_DIALOG(dialog));
+	//判断返回的值如果不是OK，直接返回
+	if(result != GTK_RESPONSE_OK)
+	{
+		gtk_widget_destroy (dialog);
+		return;
+	}
+	//获得用户输入的值
+	int width = atoi(gtk_entry_get_text(widthEntry));
+	gtk_widget_destroy (dialog);
+	if(width < 6)
+	{
+		dialog = gtk_message_dialog_new(window,GTK_DIALOG_DESTROY_WITH_PARENT,GTK_MESSAGE_INFO,GTK_BUTTONS_OK,"The input is invalid or too small");
+		result = gtk_dialog_run(GTK_DIALOG(dialog));
+		gtk_widget_destroy (dialog);
+		return;
+	}
+	//进行数字清理的操作
+	bigstatus =  BEFORE;
+	drawStatus = OTHER;
+	clearMap();//清除地图
+	setSetMapButtonStatus();
+	//创建新的地图
+	map = initMap(width,width);//初始化地图
+	//重新刷新地图
+	GdkRectangle rect;
+	rect.x = 0;
+	rect.y = 0;
+	rect.width = DRAWING_WIDTH;
+	rect.height = DRAWING_HEIGHT;
+	gdk_window_invalidate_rect(drawingArea->window,&rect,FALSE);
+}
 //设计地图按钮单击的事件
-void taggleSetMapButtonClick(GtkWidget *widget,gpointer data){
-	if(bigstatus != BEFORE){//没处于设计地图的状态时，直接返回
+void taggleSetMapButtonClick(GtkWidget *widget,gpointer data)
+{
+	if(bigstatus != BEFORE)
+	{//没处于设计地图的状态时，直接返回
 		return;
 	}
 	char * dataPtr = (char *)data;
@@ -140,6 +303,55 @@ void taggleSetMapButtonClick(GtkWidget *widget,gpointer data){
 		}
 	}
 	setSetMapButtonStatus();
+}
+//显示结果点击的按钮
+void showResultClick(GtkWidget *widget,gpointer data)
+{
+	if(bigstatus != END)
+	{//没处于设计地图的状态时，直接返回
+		return;
+	}
+	//刷新的区域
+	GdkRectangle rect;
+	rect.x = 0;
+	rect.y = 0;
+	rect.width = DRAWING_WIDTH;
+	rect.height = DRAWING_HEIGHT;
+	char * dataPtr = (char *)data;
+
+	if(strcmp(dataPtr,"show_nxt")==0)
+	{
+		show_nxtStep();
+		gdk_window_invalidate_rect(drawingArea->window,&rect,FALSE);
+	}else if(strcmp(dataPtr,"show_pre")==0)
+	{
+		show_preStep();
+		gdk_window_invalidate_rect(drawingArea->window,&rect,FALSE);
+	}
+}
+//显示下一步的操作
+void show_nxtStep()
+{
+	if(map ->next != NULL)
+	{
+		map = map ->next;
+	}
+}
+//显示上一步的操作
+void show_preStep()
+{
+	if(map -> parent != NULL)
+	{
+		map = map -> parent;
+	}
+}
+//开始显示的操作
+void show_start()
+{
+	if(map -> next == NULL)
+	{
+		map = resultMap;
+	}
 }
 //设置按钮的状态
 void setSetMapButtonStatus()
@@ -335,12 +547,16 @@ void initWidget()
 	hbuttonbox3 = gtk_hbutton_box_new();//水平按钮的box3
 	//初始化按钮
 	sizeButton = gtk_button_new_with_label("new soko");
+	g_signal_connect(GTK_OBJECT(sizeButton),"clicked",G_CALLBACK(buttonSetNewMap),NULL);
+	//buttonSetNewMap
 	wallButton = gtk_toggle_button_new_with_label("set wall");
 	boxButton = gtk_toggle_button_new_with_label("set box");
 	destButton = gtk_toggle_button_new_with_label("set dest");
 	personButton = gtk_toggle_button_new_with_label("set person");
 	clearButton = gtk_toggle_button_new_with_label("clear");
 	startCaculateButton = gtk_button_new_with_label("start caculate");
+	g_signal_connect(GTK_OBJECT(startCaculateButton),"clicked",G_CALLBACK(buttonBeginCaculate),NULL);
+
 	//加入按钮的单击事件
 	drawButtonStatusHandlerId[WALL] = g_signal_connect(GTK_OBJECT(wallButton),"clicked",G_CALLBACK(taggleSetMapButtonClick),"set_wall");
 	drawButtonStatusHandlerId[BOX] = g_signal_connect(GTK_OBJECT(boxButton),"clicked",G_CALLBACK(taggleSetMapButtonClick),"set_box");
@@ -348,10 +564,10 @@ void initWidget()
 	drawButtonStatusHandlerId[PERSON] = g_signal_connect(GTK_OBJECT(personButton),"clicked",G_CALLBACK(taggleSetMapButtonClick),"set_person");
 	drawButtonStatusHandlerId[CLEAR] = g_signal_connect(GTK_OBJECT(clearButton),"clicked",G_CALLBACK(taggleSetMapButtonClick),"clear");
 
-	startShowButton = gtk_toggle_button_new_with_label(">");
 	nxtButton = gtk_button_new_with_label(">>");
 	preButton = gtk_button_new_with_label("<<");
-	stopButton = gtk_button_new_with_label("||");
+	g_signal_connect(GTK_OBJECT(nxtButton),"clicked",G_CALLBACK(showResultClick),"show_nxt");
+	g_signal_connect(GTK_OBJECT(preButton),"clicked",G_CALLBACK(showResultClick),"show_pre");
 	//初始化画图的操作
 	drawingArea = gtk_drawing_area_new();
 	gtk_widget_set_events(drawingArea,GDK_BUTTON_PRESS_MASK);
@@ -379,10 +595,8 @@ void initWidget()
 	//设置第三行
 	gtk_button_box_set_layout (GTK_BUTTON_BOX (hbuttonbox3), GTK_BUTTONBOX_SPREAD);
 	gtk_box_set_spacing (GTK_BOX (hbuttonbox3), 20);
-	gtk_container_add (GTK_CONTAINER (hbuttonbox3), startShowButton);
 	gtk_container_add (GTK_CONTAINER (hbuttonbox3), nxtButton);
 	gtk_container_add (GTK_CONTAINER (hbuttonbox3), preButton);
-	gtk_container_add (GTK_CONTAINER (hbuttonbox3), stopButton);
 
 	gtk_window_set_title(GTK_WINDOW(window), "sokomethod");
 	gtk_widget_set_size_request(GTK_WIDGET(window),WIDTH,HEIGHT);

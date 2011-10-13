@@ -6,6 +6,7 @@ struct mappos
 	unsigned int x;//横坐标
 	unsigned int y;//纵坐标
 	struct mappos * next;//下一个节点
+	struct mappos * parent;//上一个节点
 };
 /*存储推箱子地图的存储结构,char 从低bit到高bit为1依次为墙,箱子,人,目标*/
 struct sokomap
